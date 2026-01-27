@@ -10,8 +10,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from time import sleep
 from datetime import datetime
+import os
 import pandas as pd
-
+from dotenv import load_dotenv
+load_dotenv()
 
 # ======= CONFIGURAÇÕES INICIAIS =======
 def configuracoes_chrome():
@@ -24,8 +26,8 @@ def configuracoes_chrome():
 config = {
     "fechamento_25": "25/01/2026",
     "fechamento_10": "10/01/2026",
-    "usuario": "JUAN.PABLO",
-    "senha": "04112023Jh",
+    "usuario": os.getenv("USUARIO"),
+    "senha": os.getenv("SENHA"),
     "arquivo_excel": r"C:\Users\DELL\Desktop\Solicitações\Controladoria\Amanda\analise agregados\Dezembro\2 QUINZENA DE DEZEMBRO.xlsm",
     "saida_excel": r"C:/Users/DELL/Desktop/Solicitações/Controladoria/Amanda/analise agregados/Dezembro/2 QUINZENA DE DEZEMBRO.xlsx",
     "natureza": ["11"],
