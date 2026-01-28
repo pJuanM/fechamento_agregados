@@ -23,13 +23,27 @@ def configuracoes_chrome():
     chrome_options.add_argument("--start-maximized")
     return chrome_options
 
+
+# ======= DATA =======
+hoje = datetime.today()
+mes_atual = hoje.month
+ano_atual = hoje.year
+
+# ===== VERIFICAR MÊS PASSADO =====
+if mes_atual == 1:
+    mes_passado = 12
+    ano_passado = ano_atual - 1
+else:
+    mes_passado = mes_atual - 1
+    ano_passado = ano_atual
+
 config = {
-    "fechamento_25": "25/01/2026",
-    "fechamento_10": "10/01/2026",
+    "fechamento_25": f"25/{mes_atual:02d}/{ano_atual}",
+    "fechamento_10": f"10/{mes_atual:02d}/{ano_atual}",
     "usuario": os.getenv("USUARIO"),
     "senha": os.getenv("SENHA"),
     "arquivo_excel": r"C:\Users\DELL\Desktop\Solicitações\Controladoria\Amanda\analise agregados\Dezembro\2 QUINZENA DE DEZEMBRO.xlsm",
-    "saida_excel": r"C:/Users/DELL/Desktop/Solicitações/Controladoria/Amanda/analise agregados/Dezembro/2 QUINZENA DE DEZEMBRO.xlsx",
+    "saida_excel": r"C:\Users\DELL\Desktop\Solicitações\Controladoria\Amanda\analise agregados\Dezembro\2 QUINZENA DE DEZEMBRO.xlsx",
     "natureza": ["11"],
     "filiais_excluidas": ["SAO PAULO", "RECIFE"],
     "url_brudam": "https://vdclog.brudam.com.br/financeiro/contas_pagar.php?"
@@ -54,19 +68,6 @@ wdw = WebDriverWait(browser, 10)
 df = pd.read_excel(config["arquivo_excel"])
 df["CUSTO"] = df["CUSTO"].fillna("").astype(str)
 df["MANIF."] = df["MANIF."].fillna("").astype(str)
-
-# ======= DATA =======
-hoje = datetime.today()
-mes_atual = hoje.month
-ano_atual = hoje.year
-
-# ===== VERIFICAR MÊS PASSADO =====
-if mes_atual == 1:
-    mes_passado = 12
-    ano_passado = ano_atual - 1
-else:
-    mes_passado = mes_atual - 1
-    ano_passado = ano_atual
 
 # ======= VERIFICAR DIA =======
 if hoje.day > 14:
@@ -364,12 +365,12 @@ for linha in LinhasTabela:
                 browser.execute_script(
                     f"document.getElementById('competencia').value = '{ano_passado}-{mes_passado:02d}';"
                 )
+
         # ======= ESCREVER NA DESCRIÇÃO DA FATURA =======
         wdw.until(EC.presence_of_element_located((By.ID,"descricao")))
         descricao = browser.find_element(By.ID, "descricao")
         descricao.clear()
         descricao.send_keys(f"{descricao_texto} - TORRE DE CONTROLE - {manifesto_repetido}{vlr_rota}{verificar_nf} -{erro_quinzena} {situacao_manifesto}PAGAMENTO A TERCEIROS TAC: X")
-
 
         df.loc[df["AGREGADO"] == fornecedor_nome, "CUSTO"] = status_custo
         df.loc[df["AGREGADO"] == fornecedor_nome, "MANIF."] = status_manifesto
@@ -414,6 +415,7 @@ for linha in LinhasTabela:
     # ======= FECHAR ABA E RETORNAR A ABA DE LANÇAMENTOS =======
     browser.close()
     browser.switch_to.window(aba_principal)
+    
 # ======= SAIR DO PROGRAMA =======
 browser.quit()
 
