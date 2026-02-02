@@ -42,8 +42,8 @@ config = {
     "fechamento_10": f"10/{mes_atual:02d}/{ano_atual}",
     "usuario": os.getenv("USUARIO"),
     "senha": os.getenv("SENHA"),
-    "arquivo_excel": r"C:\Users\DELL\Desktop\Solicitações\Controladoria\Amanda\analise agregados\Dezembro\2 QUINZENA DE DEZEMBRO.xlsm",
-    "saida_excel": r"C:\Users\DELL\Desktop\Solicitações\Controladoria\Amanda\analise agregados\Dezembro\2 QUINZENA DE DEZEMBRO.xlsx",
+    "arquivo_excel": r"C:\Users\DELL\Documents\Solicitações\Controladoria\Amanda\analise agregados\dados_agregados\dados_agregados.xlsx",
+    "saida_excel": r"C:\Users\DELL\Documents\Solicitações\Controladoria\Amanda\analise agregados\Dezembro\1 QUINZENA DE JANEIRO.xlsx",
     "natureza": ["11"],
     "filiais_excluidas": ["SAO PAULO", "RECIFE"],
     "url_brudam": "https://vdclog.brudam.com.br/financeiro/contas_pagar.php?"
