@@ -1,9 +1,8 @@
-from selenium.webdriver import Chrome
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, NoSuchWindowException
 from selenium.webdriver.support.ui import Select
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -43,7 +42,7 @@ config = {
     "usuario": os.getenv("USUARIO"),
     "senha": os.getenv("SENHA"),
     "arquivo_excel": r"C:\Users\DELL\Documents\Solicitações\Controladoria\Amanda\analise agregados\dados_agregados\dados_agregados.xlsx",
-    "saida_excel": r"C:\Users\DELL\Documents\Solicitações\Controladoria\Amanda\analise agregados\Dezembro\1 QUINZENA DE JANEIRO.xlsx",
+    "saida_excel": r"C:\Users\DELL\Documents\Solicitações\Controladoria\Amanda\analise agregados\janeiro\1 QUINZENA DE JANEIRO.xlsx",
     "natureza": ["11"],
     "filiais_excluidas": ["SAO PAULO", "RECIFE"],
     "url_brudam": "https://vdclog.brudam.com.br/financeiro/contas_pagar.php?"
@@ -197,6 +196,12 @@ with open("arquivo.txt", "r", encoding="utf-8") as codigos_visitados:
     codigos_visitados = {linha.strip() for linha in codigos_visitados}
 
 
+if os.path.exists(config["saida_excel"]):
+    df_saida = pd.read_excel(config["saida_excel"])
+else:
+    df_saida = pd.read_excel(config["arquivo_excel"])
+
+
 # ======= ENTRAR NOS LANÇAMENTOS PELO CÓDIGO =======
 for linha in LinhasTabela:
     erro_quinzena = ""
@@ -284,6 +289,8 @@ for linha in LinhasTabela:
                 valores_manifesto = [converter_valor(valor) for valor in manifesto_valor]
 
                 for data in manifesto_saida:
+                    if not data or data.strip() =="":
+                        continue
                     data_convertida = datetime.strptime(data, "%d/%m/%Y")
                     lista_datas_saida.append(data_convertida)
                 lista_datas_unicas = set(lista_datas_saida)
@@ -301,8 +308,12 @@ for linha in LinhasTabela:
         # ======= FECHAR ABA E RETORNAR PARA A ABA DO LANÇAMENTO =======
         browser.close()
         browser.switch_to.window(browser.window_handles[-1])
-    except:
-        print(f"Código {id_lancamento} não tem fatura!")
+    except TimeoutException:
+        print(f"Código {id_lancamento} não localizou a fatura (timeout)")
+    except NoSuchWindowException:
+        print(f"Código {id_lancamento} perdeu a janela da fatura")
+    except Exception as e:
+        print(f"Erro inesperado no código {id_lancamento}: {e}")
 
     # ======= VERIFICAR SE A PÁGINA TEM ALGUM ANEXO (CONSIDERANDO COMO NF) =======
     try:
@@ -372,12 +383,13 @@ for linha in LinhasTabela:
         descricao.clear()
         descricao.send_keys(f"{descricao_texto} - TORRE DE CONTROLE - {manifesto_repetido}{vlr_rota}{verificar_nf} -{erro_quinzena} {situacao_manifesto}PAGAMENTO A TERCEIROS TAC: X")
 
-        df.loc[df["AGREGADO"] == fornecedor_nome, "CUSTO"] = status_custo
-        df.loc[df["AGREGADO"] == fornecedor_nome, "MANIF."] = status_manifesto
-        df.loc[df["AGREGADO"] == fornecedor_nome, "VLR FATURA"] = valor_fatura
+        mask = df_saida["AGREGADO"] == fornecedor_nome
 
-        df_novo = df.copy()
-        df_novo.to_excel(config["saida_excel"], index=False)
+        df_saida.loc[mask, "CUSTO"] = status_custo
+        df_saida.loc[mask, "MANIF."] = status_manifesto
+        df_saida.loc[mask, "VLR FATURA"] = valor_fatura
+
+        df_saida.to_excel(config["saida_excel"], index=False)
         print("Arquivo Excel Gerado com Sucesso!")
         
     # ======= SE NAO ENCONTROU AGREGADO OU É DUPLICADO PÕEM COMO ANÁLISE =======
