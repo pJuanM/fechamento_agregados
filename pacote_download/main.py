@@ -42,14 +42,14 @@ config = {
     "usuario": os.getenv("USUARIO"),
     "senha": os.getenv("SENHA"),
     "arquivo_excel": r"C:\Users\DELL\Documents\Solicitações\Controladoria\Amanda\analise agregados\dados_agregados\dados_agregados.xlsx",
-    "saida_excel": r"C:\Users\DELL\Documents\Solicitações\Controladoria\Amanda\analise agregados\janeiro\1 QUINZENA DE JANEIRO.xlsx",
+    "saida_excel": r"C:\Users\DELL\Documents\Solicitações\Controladoria\Amanda\analise agregados\marco\1 QUINZENA DE MARCO.xlsx",
     "natureza": ["11"],
     "filiais_excluidas": ["SAO PAULO", "RECIFE"],
     "url_brudam": "https://vdclog.brudam.com.br/financeiro/contas_pagar.php?"
 }
 
 meses = {
-    1 : "JANEIRO", 2 : "FEVEREIRO", 3 : "MARÇO", 4 : "ABRIL", 5 : "MAIO", 6 : "JUNHO", 7 : "JULHO", 8 : "AGOSTO", 9 : "SETEMBRO", 10 : "OUTUBRO", 11 : "NOVEMBRO", 12 : "DEZEMBRO"
+    1 : "JANEIRO", 2 : "FEVEREIRO", 3 : "MARCO", 4 : "ABRIL", 5 : "MAIO", 6 : "JUNHO", 7 : "JULHO", 8 : "AGOSTO", 9 : "SETEMBRO", 10 : "OUTUBRO", 11 : "NOVEMBRO", 12 : "DEZEMBRO"
 }
 
 
@@ -141,6 +141,19 @@ def existe_data_maior(manifesto_saida, data_limite_str):
             return True
     return False
 
+def existe_data_menor(manifesto_saida, data_inicio_str):
+    data_inicio = datetime.strptime(data_inicio_str, "%d/%m/%Y")
+    for data in manifesto_saida:
+        if not data.strip():
+            continue
+        try:
+            data_convertida = datetime.strptime(data, "%d/%m/%Y")
+        except ValueError:
+            continue
+        if data_convertida < data_inicio:
+            return True
+    return False
+
 
 # ======= REALIZAR LOGIN =======
 wdw.until(EC.element_to_be_clickable((By.ID, "user")))
@@ -157,7 +170,11 @@ elemento("ID", "data_2", data_final)
 # ======= SELECIONAR SITUAÇÃO DA FATURA =======
 wdw.until(EC.presence_of_element_located((By.ID,"situacao")))
 elemento("ID", "selSituacao")
-elemento("CSS", "input[type='checkbox'][value='5']")
+desmarcar_autorizado = WebDriverWait(browser,10).until(
+    EC.presence_of_element_located((By.CSS_SELECTOR,"input.situacoes[value='5']"))
+)
+
+browser.execute_script("arguments[0].click();", desmarcar_autorizado)
 elemento("CSS", ".ui-dialog-buttonset")
 
 # ======= ESPERAR CENTRO DE CUSTO APARECER =======
@@ -210,12 +227,15 @@ for linha in LinhasTabela:
     lista_datas_saida = []
     manifesto_saida = []
     manifesto_placa = []
+    manifesto_peso = []
     manifesto_finalizado = []
     manifesto_valor = []
     valor_agregado = []
     vlr_rota = ""
     status_manifesto = "OK"
     status_custo = ""
+    peso_abaixo = False
+
     
     # ======= ENTRAR NOS LANÇAMENTOS =======
     id_lancamento = linha.get_attribute("id")
@@ -251,11 +271,15 @@ for linha in LinhasTabela:
         for selecao in selecoes:
             lista_linhas = selecao.find_elements(By.CLASS_NAME, "LISTA_linha")
             manifesto_placa.append(lista_linhas[2].text)
+            manifesto_peso.append(lista_linhas[6].text)
             manifesto_saida.append(lista_linhas[3].text)
             manifesto_finalizado.append(lista_linhas[4].text)
             manifesto_valor.append(lista_linhas[11].text)
 
-        # ======= VERIFICAR SITUAÇÃO DOS MANIFESTOS =======
+        peso_total = browser.find_element(By.ID,"pesoSelecionado").text
+        peso_total = peso_total.replace(".","").replace(",",".")
+        peso_medio = float(peso_total) / len(manifesto_peso)
+
         if "" in manifesto_placa:
             situacao_manifesto += "S/PLACA - "
             status_manifesto = "NOK"
@@ -287,6 +311,18 @@ for linha in LinhasTabela:
                 valor_agregado = df.loc[df["AGREGADO"] == fornecedor_nome, "VALOR"].unique()
                 valor_agregado = converter_valor(str(valor_agregado[0]))
                 valores_manifesto = [converter_valor(valor) for valor in manifesto_valor]
+
+                        # ======= VERIFICAR SITUAÇÃO DOS MANIFESTOS =======
+                for peso in manifesto_peso:
+                    peso = str(peso).replace(".","").replace(",",".")
+                    peso = float(peso)
+                    peso -= peso * 0.5
+
+                    if not peso_abaixo and peso < peso_medio:
+                        situacao_manifesto += "PESO - "
+                        peso_abaixo = True
+                    elif not peso_abaixo:
+                        print(f"Peso {peso}  -- está acima -- da média")
 
                 for data in manifesto_saida:
                     if not data or data.strip() =="":
@@ -346,15 +382,24 @@ for linha in LinhasTabela:
         # ======= VERIFICAR QUINZENA =======
         if "1 QUINZENA" in descricao_texto:
             if fechamento == 10:
-                data_limite = f"15/{mes_passado:02d}/{ano_passado}"
+                data_limite = f"15/{mes_passado:02d}/{ano_atual}"
+                data_inicio = f"01/{mes_passado:02d}/{ano_atual}"
             else:
                 data_limite = f"15/{mes_atual:02d}/{ano_atual}"
+                data_inicio = f"01/{mes_atual:02d}/{ano_atual}"
             if existe_data_maior(manifesto_saida, data_limite):
+                erro_quinzena = " ERRO QUINZ. -"
+            if existe_data_menor(manifesto_saida, data_inicio):
+                erro_quinzena = ""
                 erro_quinzena = " ERRO QUINZ. -"
 
         elif "2 QUINZENA" in descricao_texto:
-            data_limite = f"31/{mes_passado:02d}/{ano_passado}"
+            data_limite = f"31/{mes_passado:02d}/{ano_atual}"
+            data_inicio = f"16/{mes_passado:02d}/{ano_atual}"
             if existe_data_maior(manifesto_saida, data_limite):
+                erro_quinzena = " ERRO QUINZ. -"
+            if existe_data_menor(manifesto_saida, data_inicio):
+                erro_quinzena = ""
                 erro_quinzena = " ERRO QUINZ. -"
 
         # ======= VERIFICAR MÊS COMPETÊNCIA =======
@@ -385,6 +430,8 @@ for linha in LinhasTabela:
 
         mask = df_saida["AGREGADO"] == fornecedor_nome
 
+        df_saida["CUSTO"] = df_saida["CUSTO"].astype("object")
+        df_saida["MANIF."] = df_saida["MANIF."].astype("object")
         df_saida.loc[mask, "CUSTO"] = status_custo
         df_saida.loc[mask, "MANIF."] = status_manifesto
         df_saida.loc[mask, "VLR FATURA"] = valor_fatura
@@ -418,7 +465,7 @@ for linha in LinhasTabela:
     if len(conta_bancaria) > 1:
         conta_bancaria.sort()
         selecionar_conta_bancaria.select_by_value(conta_bancaria[1])
-
+    sleep(2)
     # ======= SALVAR PROCESSO DA FATURA =======
     salvar = browser.find_element(By.ID, "salvar").click()
     sleep(2)
@@ -434,3 +481,4 @@ browser.quit()
 # ======= SALVAR CÓDIGOS JÁ VISITADOS =======
 with open("arquivo.txt", "a", encoding="utf-8") as codigos_visitados:
     codigos_visitados.writelines(f"{codigo}\n" for codigo in adicionar_codigos)
+
