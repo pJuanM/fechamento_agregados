@@ -1,7 +1,6 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, NoSuchWindowException
 from selenium.webdriver.support.ui import Select
 from selenium import webdriver
@@ -42,7 +41,7 @@ config = {
     "usuario": os.getenv("USUARIO"),
     "senha": os.getenv("SENHA"),
     "arquivo_excel": r"C:\Users\DELL\Documents\Solicitações\Controladoria\Amanda\analise agregados\dados_agregados\dados_agregados.xlsx",
-    "saida_excel": r"C:\Users\DELL\Documents\Solicitações\Controladoria\Amanda\analise agregados\marco\1 QUINZENA DE MARCO.xlsx",
+    "saida_excel": r"C:\Users\DELL\Documents\Solicitações\Controladoria\Amanda\analise agregados\marco\2 QUINZENA DE MARCO.xlsx",
     "natureza": ["11"],
     "filiais_excluidas": ["SAO PAULO", "RECIFE"],
     "url_brudam": "https://vdclog.brudam.com.br/financeiro/contas_pagar.php?"
@@ -244,6 +243,7 @@ for linha in LinhasTabela:
     url = f"https://vdclog.brudam.com.br/financeiro/consulta_lancamento.php?id={id_lancamento}"
     browser.execute_script(f"window.open(arguments[0]);",url)
     browser.switch_to.window(browser.window_handles[-1])
+    print(f"Lendo a fatura: {id_lancamento}")
 
     # ======= VALOR DA FATURA =======
     wdw.until(EC.presence_of_element_located((By.ID,"naturezaValor_11")))
